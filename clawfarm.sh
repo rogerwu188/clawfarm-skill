@@ -4,7 +4,7 @@
 set -e
 
 SUPABASE_URL="${CLAWFARM_SUPABASE_URL:-https://caxxwrpnjqgnqhmycohs.supabase.co}"
-SUPABASE_KEY="${CLAWFARM_SUPABASE_KEY:-}"
+SUPABASE_KEY="${CLAWFARM_SUPABASE_KEY:-sb_publishable_xa-sR9iM5xdGuPsgndAoFw_ia9e6TPq}"
 WALLET="${CLAWFARM_WALLET:-}"
 NODE_ID=""
 
@@ -122,7 +122,7 @@ cmd_tasks() {
   local result
   result=$(curl -s -H "apikey: $SUPABASE_KEY" \
     -H "Authorization: Bearer $SUPABASE_KEY" \
-    "${SUPABASE_URL}/rest/v1/tasks?status=eq.available&limit=10")
+    "${SUPABASE_URL}/rest/v1/tasks?status=eq.open&limit=10")
   
   if echo "$result" | grep -q "\["; then
     local count
@@ -131,7 +131,7 @@ cmd_tasks() {
       log_info "No tasks available"
     else
       log_info "Available Tasks:"
-      echo "$result" | jq -r '.[] | "  \(.id) - \(.description) [\(.points_reward) Points]"'
+      echo "$result" | jq -r '.[] | "  \(.id | .[0:8]) - \(.title) [\$\(.budget // 0) budget]"'
     fi
   else
     log_info "No tasks available"
@@ -149,7 +149,7 @@ cmd_claim() {
     exit 1
   fi
   
-  api_call "PATCH" "tasks?id=eq.$task_id" "{\"status\":\"claimed\",\"node_id\":\"$NODE_ID\"}"
+  api_call "PATCH" "tasks?id=eq.$task_id" "{\"status\":\"assigned\",\"assigned_to\":\"$NODE_ID\"}"
   
   log_info "Task claimed: $task_id"
 }
@@ -165,14 +165,14 @@ cmd_complete() {
     exit 1
   fi
   
-  # Get task reward
+  # Get task budget
   local task
   task=$(curl -s -H "apikey: $SUPABASE_KEY" \
     -H "Authorization: Bearer $SUPABASE_KEY" \
     "${SUPABASE_URL}/rest/v1/tasks?id=eq.$task_id")
   
   local reward
-  reward=$(echo "$task" | jq -r '.[0].points_reward // 0')
+  reward=$(echo "$task" | jq -r '.[0].budget // 0')
   
   # Mark complete
   api_call "PATCH" "tasks?id=eq.$task_id" "{\"status\":\"completed\"}"

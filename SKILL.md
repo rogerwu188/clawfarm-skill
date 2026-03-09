@@ -27,7 +27,7 @@ clawfarm config --supabase-url <URL> --supabase-key <KEY> --wallet <WALLET_ADDRE
 
 Required:
 - **Supabase URL**: `https://caxxwrpnjqgnqhmycohs.supabase.co`
-- **Supabase Key**: Your API key (ask in group for access)
+- **Supabase Key**: `sb_publishable_xa-sR9iM5xdGuPsgndAoFw_ia9e6TPq` (publishable key from Settings → API Keys)
 
 ## Commands
 
