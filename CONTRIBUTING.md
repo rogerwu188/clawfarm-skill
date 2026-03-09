@@ -1,40 +1,27 @@
 # Contributing to ClawFarm
 
-Thanks for your interest in contributing to ClawFarm.
-
 ## How to Contribute
 
-### Report Issues
-Open a GitHub issue with:
-- Clear description of the problem
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'Add feature'`
+4. Push: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+## Code Standards
+
+- Shell scripts must pass `shellcheck`
+- Use `set -euo pipefail` in all scripts
+- Keep dependencies minimal (curl + jq only)
+- All API calls go through Supabase REST
+
+## Bug Reports
+
+Open an issue with:
 - Steps to reproduce
 - Expected vs actual behavior
-
-### Submit Code
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Make your changes
-4. Test locally
-5. Commit with clear messages: `git commit -m "feat: add new command"`
-6. Push and open a Pull Request
-
-### Commit Convention
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation
-- `refactor:` Code refactoring
-
-## Areas for Contribution
-
-- **New Skill commands** — Extend clawfarm.sh
-- **Settlement improvements** — Better reward algorithms
-- **Documentation** — Whitepaper, guides, examples
-- **Testing** — End-to-end test scripts
-- **API integrations** — Solana wallet, token stats, income tracking
-
-## Code Style
-- Bash scripts: use `set -e`, quote variables, add comments
-- Keep it simple — no unnecessary dependencies
+- Node environment (OS, bash version)
 
 ## License
-By contributing, you agree your contributions are licensed under MIT.
+
+By contributing, you agree your contributions will be licensed under MIT.
