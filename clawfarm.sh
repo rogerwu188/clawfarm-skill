@@ -110,7 +110,7 @@ cmd_usage() {
   
   log_info "Recording usage: $amount tokens"
   
-  api_call "POST" "usage_ledger" "{\"node_id\":\"$NODE_ID\",\"usage_tokens\":$amount,\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+  api_call "POST" "usage_ledger" "{\"node_id\":\"$NODE_ID\",\"token_usage\":$amount}"
   
   log_info "Usage recorded!"
 }
@@ -131,7 +131,7 @@ cmd_tasks() {
       log_info "No tasks available"
     else
       log_info "Available Tasks:"
-      echo "$result" | jq -r '.[] | "  \(.id | .[0:8]) - \(.title) [\$\(.budget // 0) budget]"'
+      echo "$result" | jq -r '.[] | "  \(.id | .[0:8]) - \(.title) [\(.budget // 0) pts]"'
     fi
   else
     log_info "No tasks available"
