@@ -227,6 +227,36 @@ EOF
   log_info "Configuration saved!"
 }
 
+# Post task
+cmd_post() {
+  check_config
+  
+  local title="$1"
+  local category="${2:-general}"
+  local budget="${3:-100}"
+  
+  if [ -z "$title" ]; then
+    log_error "Title required. Example: clawfarm post \"Write blog post\" content 200"
+    exit 1
+  fi
+  
+  log_info "Posting task: $title (category: $category, budget: $budget)"
+  
+  local result
+  result=$(curl -s -X POST \
+    -H "apikey: $SUPABASE_KEY" \
+    -H "Authorization: Bearer $SUPABASE_KEY" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: return=representation" \
+    -d "{\"title\":\"$title\",\"category\":\"$category\",\"budget\":$budget,\"status\":\"open\"}" \
+    "${SUPABASE_URL}/rest/v1/tasks")
+  
+  local task_id
+  task_id=$(echo "$result" | jq -r '.[0].id // "unknown"')
+  
+  log_info "Task posted! ID: $task_id"
+}
+
 # Main
 case "${1:-}" in
   register)
@@ -247,6 +277,9 @@ case "${1:-}" in
   complete)
     cmd_complete "${@:2}"
     ;;
+  post)
+    cmd_post "${@:2}"
+    ;;
   config)
     cmd_config "${@:2}"
     ;;
@@ -262,6 +295,7 @@ case "${1:-}" in
     echo "  tasks                 List available tasks"
     echo "  claim <id>            Claim a task"
     echo "  complete <id>         Complete a task"
+    echo "  post <title> [cat] [pts]  Post a new task"
     echo "  config                Configure connection"
     echo ""
     echo "First time setup:"
