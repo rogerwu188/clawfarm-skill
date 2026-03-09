@@ -6,6 +6,9 @@ set -e
 SUPABASE_URL="${CLAWFARM_SUPABASE_URL:-https://caxxwrpnjqgnqhmycohs.supabase.co}"
 SUPABASE_KEY="${CLAWFARM_SUPABASE_KEY:-sb_publishable_xa-sR9iM5xdGuPsgndAoFw_ia9e6TPq}"
 WALLET="${CLAWFARM_WALLET:-}"
+MODEL_ENDPOINT="${CLAWFARM_MODEL_ENDPOINT:-}"
+MODEL_KEY="${CLAWFARM_MODEL_KEY:-}"
+MODEL_NAME="${CLAWFARM_MODEL_NAME:-claude-sonnet-4-5}"
 NODE_ID=""
 
 # Colors
@@ -108,9 +111,9 @@ cmd_usage() {
     exit 1
   fi
   
-  log_info "Recording usage: $amount tokens"
+  log_info "Recording usage: $amount tokens (model: $MODEL_NAME)"
   
-  api_call "POST" "usage_ledger" "{\"node_id\":\"$NODE_ID\",\"token_usage\":$amount}"
+  api_call "POST" "usage_ledger" "{\"node_id\":\"$NODE_ID\",\"model_name\":\"$MODEL_NAME\",\"token_usage\":$amount}"
   
   log_info "Usage recorded!"
 }
@@ -210,6 +213,21 @@ cmd_config() {
         export CLAWFARM_WALLET="$2"
         shift 2
         ;;
+      --model-endpoint)
+        MODEL_ENDPOINT="$2"
+        export CLAWFARM_MODEL_ENDPOINT="$2"
+        shift 2
+        ;;
+      --model-key)
+        MODEL_KEY="$2"
+        export CLAWFARM_MODEL_KEY="$2"
+        shift 2
+        ;;
+      --model-name)
+        MODEL_NAME="$2"
+        export CLAWFARM_MODEL_NAME="$2"
+        shift 2
+        ;;
       *)
         shift
         ;;
@@ -222,9 +240,13 @@ cmd_config() {
 export CLAWFARM_SUPABASE_URL="$SUPABASE_URL"
 export CLAWFARM_SUPABASE_KEY="$SUPABASE_KEY"
 export CLAWFARM_WALLET="$WALLET"
+export CLAWFARM_MODEL_ENDPOINT="$MODEL_ENDPOINT"
+export CLAWFARM_MODEL_KEY="$MODEL_KEY"
+export CLAWFARM_MODEL_NAME="$MODEL_NAME"
 EOF
   
   log_info "Configuration saved!"
+  log_info "Model: $MODEL_NAME ($MODEL_ENDPOINT)"
 }
 
 # Post task
