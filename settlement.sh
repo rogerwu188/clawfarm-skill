@@ -9,9 +9,9 @@ SUPABASE_KEY="${CLAWFARM_SUPABASE_KEY:-sb_publishable_xa-sR9iM5xdGuPsgndAoFw_ia9
 
 # Genesis emission schedule (Points per day)
 DAILY_EMISSION=10000000  # 10M Points/day (Month 1-3)
-BASE_POOL_RATIO=50       # 50%
-REVENUE_POOL_RATIO=40    # 40%
-TREASURY_RATIO=10        # 10%
+BASE_POOL_RATIO=50       # 50% - distributed by compute/usage
+REVENUE_POOL_RATIO=50    # 50% - distributed by output/tasks
+TREASURY_TAX=3           # 3% tax on user earnings → treasury buyback
 
 # Colors
 GREEN='\033[0;32m'
@@ -75,11 +75,11 @@ log "Step 3: Calculating rewards..."
 
 BASE_POOL=$((DAILY_EMISSION * BASE_POOL_RATIO / 100))
 REVENUE_POOL=$((DAILY_EMISSION * REVENUE_POOL_RATIO / 100))
-TREASURY_AMOUNT=$((DAILY_EMISSION * TREASURY_RATIO / 100))
+TREASURY_TOTAL=0  # Accumulated from 3% tax on earnings
 
-log "Base Pool: $BASE_POOL Points"
-log "Revenue Pool: $REVENUE_POOL Points"
-log "Treasury: $TREASURY_AMOUNT Points"
+log "Base Pool: $BASE_POOL Points (50% compute)"
+log "Revenue Pool: $REVENUE_POOL Points (50% output)"
+log "Treasury Tax: ${TREASURY_TAX}% on all earnings → buyback"
 
 # Step 4: Distribute Base Pool (by usage)
 log ""
@@ -94,14 +94,19 @@ if [ "$TOTAL_USAGE" -gt 0 ] 2>/dev/null; then
     REWARD=$(echo "scale=0; $NODE_TOKENS * $BASE_POOL / $TOTAL_USAGE" | bc)
     
     if [ "$REWARD" -gt 0 ] 2>/dev/null; then
-      log "  $NODE_ID: +$REWARD Points (usage: $NODE_TOKENS tokens)"
+      # Apply 3% treasury tax
+      TAX=$((REWARD * TREASURY_TAX / 100))
+      NET_REWARD=$((REWARD - TAX))
+      TREASURY_TOTAL=$((TREASURY_TOTAL + TAX))
+      
+      log "  $NODE_ID: +$NET_REWARD Points (gross: $REWARD, tax: $TAX) [usage: $NODE_TOKENS tokens]"
       
       # Write to points_ledger
-      api POST "points_ledger" "{\"node_id\":\"$NODE_ID\",\"amount\":$REWARD,\"source\":\"base_pool\"}" > /dev/null
+      api POST "points_ledger" "{\"node_id\":\"$NODE_ID\",\"amount\":$NET_REWARD,\"source\":\"base_pool\"}" > /dev/null
       
       # Update node balance
       CURRENT=$(api GET "nodes?node_id=eq.$NODE_ID&select=points_balance" | jq '.[0].points_balance // 0')
-      NEW_BALANCE=$((CURRENT + REWARD))
+      NEW_BALANCE=$((CURRENT + NET_REWARD))
       api PATCH "nodes?node_id=eq.$NODE_ID" "{\"points_balance\":$NEW_BALANCE}" > /dev/null
     fi
   done
@@ -122,14 +127,19 @@ if [ "$TOTAL_COMPLETED" -gt 0 ] 2>/dev/null; then
     REWARD=$(echo "scale=0; $NODE_COUNT * $REVENUE_POOL / $TOTAL_COMPLETED" | bc)
     
     if [ "$REWARD" -gt 0 ] 2>/dev/null; then
-      log "  $NODE_ID: +$REWARD Points (tasks: $NODE_COUNT)"
+      # Apply 3% treasury tax
+      TAX=$((REWARD * TREASURY_TAX / 100))
+      NET_REWARD=$((REWARD - TAX))
+      TREASURY_TOTAL=$((TREASURY_TOTAL + TAX))
+      
+      log "  $NODE_ID: +$NET_REWARD Points (gross: $REWARD, tax: $TAX) [tasks: $NODE_COUNT]"
       
       # Write to points_ledger
-      api POST "points_ledger" "{\"node_id\":\"$NODE_ID\",\"amount\":$REWARD,\"source\":\"revenue_pool\"}" > /dev/null
+      api POST "points_ledger" "{\"node_id\":\"$NODE_ID\",\"amount\":$NET_REWARD,\"source\":\"revenue_pool\"}" > /dev/null
       
       # Update node balance
       CURRENT=$(api GET "nodes?node_id=eq.$NODE_ID&select=points_balance" | jq '.[0].points_balance // 0')
-      NEW_BALANCE=$((CURRENT + REWARD))
+      NEW_BALANCE=$((CURRENT + NET_REWARD))
       api PATCH "nodes?node_id=eq.$NODE_ID" "{\"points_balance\":$NEW_BALANCE}" > /dev/null
     fi
   done
@@ -137,11 +147,15 @@ else
   warn "  No tasks completed today. Revenue Pool not distributed."
 fi
 
-# Step 6: Treasury allocation
+# Step 6: Treasury (3% buyback fund)
 log ""
-log "Step 6: Treasury allocation..."
-api POST "points_ledger" "{\"node_id\":\"treasury\",\"amount\":$TREASURY_AMOUNT,\"source\":\"treasury\"}" > /dev/null
-log "  Treasury: +$TREASURY_AMOUNT Points"
+log "Step 6: Treasury buyback fund..."
+if [ "$TREASURY_TOTAL" -gt 0 ] 2>/dev/null; then
+  api POST "points_ledger" "{\"node_id\":\"treasury\",\"amount\":$TREASURY_TOTAL,\"source\":\"buyback_tax\"}" > /dev/null
+  log "  Treasury: +$TREASURY_TOTAL Points (3% tax from all earnings → buyback)"
+else
+  log "  Treasury: 0 (no earnings today)"
+fi
 
 # Step 7: Summary
 log ""
